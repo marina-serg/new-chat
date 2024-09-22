@@ -1,0 +1,54 @@
+{% extends "chat/base.html" %}
+{% block title %}Profile Page{% endblock title %}
+{% block content %}
+ {% if user_form.errors %}
+        <div class="container d-flex align-items-center justify-content-center">
+            <div class="alert alert-warning alert-dismissible fade show w-50  d-block" role="alert">
+                {% for key, value in user_form.errors.items %}
+                    <strong>{{ value }}</strong>
+                {% endfor %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    {% endif %}
+<div class="new-content">
+    <div class="form-content">
+            <div>
+        <img alt="Avatar" class="avatar" src="{{ user.profile.avatar.url }} "/>
+    </div>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div>
+                <div class="signup-form">
+                    <div>
+                         <div class="form-group">
+                        <label >Username:</label>
+                        {{ user_form.username }}
+                         </div>
+                         <h4>{%if user.profile.is_online %}online{% else %}{{ user.last_login }}{% endif%} </h4>
+                        <hr>
+                        <div class="form-group">
+                        <label>Email:</label>
+                        {{ user_form.email }}
+                                </div>
+                    </div>
+
+                    <div><a href="{% url 'password_change' %}">Change Password</a>
+
+                        <div class="form-group">
+                        <label>Change Avatar:</label>
+                        {{ profile_form.avatar }}
+                                </div>
+                    </div>
+
+                        <div class="form-group">
+                    <label>Bio:</label> {{ profile_form.bio }}
+                                </div>
+                </div>
+            </div>
+            <button type="submit" class="new_btn">Save Changes</button>
+            <button type="reset" class="new_btn">Reset</button>
+        </form>
+    </div>
+ </div>
+{% endblock content %}
