@@ -1,0 +1,10 @@
+{% extends "registration/base.html" %}
+{% load static %}
+{% block title %}Logout{% endblock %}
+{% block content %}
+    <div class="signup-form-container">
+        <h3>Вы вышли из системы</h3>
+        <hr>
+        <a href="{% url 'login' %}" class="btn btn-primary btn-lg btn-block">Войти снова</a>
+    </div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "chat/base.html" %}
+{% load static %}
+{% block title %}Мой профиль{% endblock %}
+
+{% block content %}
+ <div class="form-container" style="padding: 60px 120px; max-width: 1000px;">
+        <h2 style="padding: 10px">Мой профиль</h2>
+        <div class="profile-header">
+            <img src="{{ user.profile.avatar.url }}" alt="Avatar" class="avatar">
+
+            <div class="profile-info">
+                <p><strong>Username:</strong>
+                        {{ user.username }}</p>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Bio:</strong> {{ user.profile.bio }}</p>
+            </div>
+        </div>
+        <div class="header-buttons">
+            <a href="{% url 'users-profile' %}" class="btn btn-primary btn-lg">Редактировать профиль</a>
+            <a href="{% url 'home' %}" class="btn btn-primary btn-lg">Мои чаты</a>
+        </div>
+    </div>
+
+{% endblock %}

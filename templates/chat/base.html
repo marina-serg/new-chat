@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link rel="stylesheet" href="{% static 'styles_chat.css' %}">
+   <title>{%block title%}{%endblock title%}</title>
+</head>
+<body>
+<header class="header">
+    <div class="container">
+        <a href="{% url 'home' %}" class="logo-link">
+            <img src="{% static 'logo.png' %}" alt="LinkLine Logo" class="logo">
+            <h1 class="site-title">LinkLine</h1>
+        </a>
+        <div class="header-buttons">
+            <a href="{% url 'my-profile' %}" class="btn">Мой профиль</a>
+            <a href="{% url 'logout' %}" class="btn">Выйти</a>
+        </div>
+    </div>
+</header>
+<main>
+    {%block content%}
+    {% endblock content%}
+</main>
+    <footer class="footer">
+        <div class="footer-container">
+            <p class="m-0 text-center text-white">LinkLine</p>
+        </div>
+    </footer>
+    {%block script%}
+    {%endblock script%}
+</body>
+</html>
