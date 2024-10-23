@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LinkLine{% endblock title %}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+<body>
+    <header class="header">
+        <div class="container">
+             <a href="{% url 'my-profile' %}" class="logo-link">
+                <img src="{% static 'logo.png' %}" alt="LinkLine Logo" class="logo">
+                  <h1 class="site-title">LinkLine</h1>
+            </a>
+
+        </div>
+    </header>
+    <main>
+        {% block content %}
+
+
+        {% endblock %}
+
+    </main>
+                <footer class="footer">
+            <div class="footer-container">
+                <p class="m-0 text-center text-white">LinkLine</p>
+            </div>
+        </footer>
+</body>
+</html>

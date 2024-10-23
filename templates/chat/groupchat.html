@@ -1,0 +1,303 @@
+{% extends 'chat/base.html' %}
+{% block title %} Chat Room{% endblock title %}
+{% block content %}
+
+<div class="container-new">
+
+    <div class="sms-sidebar">
+        <a id="backButton" href="{% url 'home' %}"> < вернуться к чату</a>
+        <div class="sms-sidebar-header">
+            <h5 class="sms-group-header">{{ group_name }} (Участников: {{ group_members|length }})</h5>
+            <form action="{% url 'clear_chat' group_uuid=group_uuid %}" method="post" class="sms-clear-chat-form">
+                {% csrf_token %}
+                <input type="submit" class="sms-clear-chat-btn" value="Очистить чат">
+            </form>
+        </div>
+        <img src="{{ group.chat_avatar.url }}" alt="Avatar" class="sms-avatar"/><br>
+        <h5 class="sms-members-header ">Group Members</h5>
+        <div class="sms-chat-sidebar">
+            <ul id="members" class="sms-members-list ">
+                {% for member in group_members %}
+                <li id="member-{{ member.username }}" class="sms-member-item">
+                    {{ member }}
+                    {% if member.profile.is_online %}
+                    <span class="sms-online">online</span>
+                    {% else %}
+                    <span class="sms-offline">был(а) {{ member.last_login }}</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="sms-main-content">
+
+        <div class="sms-chat-options">
+            <button class="sms-options-btn" onclick="toggleChatOptions()">...</button>
+            <div class="sms-chat-options-panel" id="chatOptionsPanel" style="display: none;">
+                <form method="post" enctype="multipart/form-data" class="sms-form">
+                    {% csrf_token %}
+                    <label class="sms-label ">Change Avatar:</label>{{ group_form.chat_avatar }}
+                    <label class="sms-label">Change Name:</label>{{ group_form.name }}
+                    <button type="submit" class="sms-button">Сохранить изменения</button>
+                </form>
+            </div>
+
+        </div>
+
+        <div class="sms-chat-search">
+            <input id="chat-search-input" type="text" placeholder="Search...">
+            <div id="search-results"
+                 style="display: none; margin-top: 5px; border: 1px solid #ccc; padding: 5px; width: calc(100% - 12px);">
+                <h3>Search Results</h3>
+                <div id="search-results-content"></div>
+            </div>
+        </div>
+
+        <div id="chat-container" class="sms-chat-container">
+            <div id="chat-log" class="sms-chat-log">
+                {% for message in message_and_event_list %}
+                <p>
+                <div id="message-{{ message.id }}">{{ message }}</div>
+                </p>
+                {% endfor %}
+            </div>
+
+
+        </div>
+
+        <div class="sms-chat-inputs">
+            <input id="chat-message-input" class="sms-chat-message-input" type="text"
+                   placeholder="Type your message...">
+            <input id="chat-message-submit" class="sms-chat-message-submit" type="button" value="Send">
+
+        </div>
+
+        <h3 class="sms-invite-header">Пригласить пользователя</h3>
+        <form id="invite-form" method="post" action="{% url 'invite_user' uuid=group.uuid %}" class="sms-invite-form">
+            {% csrf_token %}
+            <input type="text" id="invite-email" name="email" placeholder="Введите email" autocomplete="off"
+                   class="sms-invite-input">
+            {% if success_messages %}
+            <ul class="success-messages">
+                {% for message in success_messages %}
+               <p> {{ message }}</p>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if invite_form.email.errors %}
+            <div class="error-messages" id="email-error">
+                {% for error in invite_form.email.errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+
+            <button type="submit" class="sms-invite-button">Пригласить</button>
+        </form>
+
+        <div id="suggestions" class="sms-suggestions"></div>
+    </div>
+</div>
+<div id="chatOptionsModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="toggleChatOptions()">&times;</span>
+        <form method="post" enctype="multipart/form-data" class="sms-form">
+            {% csrf_token %}
+            <label class="sms-label">Change Avatar:</label>{{ group_form.chat_avatar }}
+            <label class="sms-label">Change Name:</label>{{ group_form.name }}
+            <button type="submit" class="sms-button">Сохранить изменения</button>
+        </form>
+    </div>
+</div>
+
+{% endblock content %}
+
+
+{% block script %}
+
+<script>
+    const base_url = `${window.location.host}${window.location.pathname}`;
+    const chatSocket = new WebSocket(`ws://${base_url}`);
+    const chatLog = document.getElementById('chat-log');
+    const scrollDownBtn = document.getElementById('scroll-down-btn');
+
+    chatSocket.onopen = function () {
+        console.log("Connected");
+    };
+
+    chatSocket.onmessage = function (e) {
+        const data = JSON.parse(e.data);
+
+        if (data.type === "search_message") {
+            const searchResultsDiv = document.getElementById('search-results');
+            const searchResultsContent = document.getElementById('search-results-content');
+
+            searchResultsContent.innerHTML = '';
+
+            data.message.forEach((result) => {
+                const messageId = `message-${result.message_id}`;
+                const link = document.createElement('a');
+                link.href = `#${messageId}`;
+                link.textContent = `${result.author}: ${result.text}`;
+
+                link.onclick = function (e) {
+                    e.preventDefault();
+                    setTimeout(() => {
+                        const messageElement = document.getElementById(messageId);
+                        if (messageElement) {
+                            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            document.getElementById('search-results').style.display = 'none';
+                            document.querySelector('#chat-search-input').value = '';
+                        }
+                    }, 100);
+                };
+
+                const resultDiv = document.createElement('div');
+                resultDiv.appendChild(link);
+                searchResultsContent.appendChild(resultDiv);
+            });
+
+            searchResultsDiv.style.display = 'block';
+        } else if (data.type === "text_message") {
+            const newMessage = document.createElement('span');
+            newMessage.id = `message-${data.message_id}`;
+            newMessage.textContent = data.message;
+            newMessage.innerHTML =   data.message +'<br>' ;
+
+            chatLog.appendChild(newMessage);
+            chatLog.appendChild(document.createElement('br'));
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        if (data.status === "Left") {
+            document.getElementById(`member-${data.user}`).remove();
+        } else if (data.status === "Join") {
+            const memberItem = document.createElement("li");
+            memberItem.id = `member-${data.user}`;
+            memberItem.textContent = data.user;
+            document.getElementById('members').appendChild(memberItem);
+        }
+    };
+
+    chatSocket.onclose = function () {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    document.querySelector('#chat-message-input').addEventListener('keyup', function (e) {
+        if (e.key === 'Enter') {
+            document.querySelector('#chat-message-submit').click();
+        }
+    });
+
+    document.querySelector('#chat-message-submit').onclick = function () {
+        const messageInputDom = document.querySelector('#chat-message-input');
+        const message = messageInputDom.value;
+        chatSocket.send(JSON.stringify({
+            'type': "text_message",
+            "author": `{{request.user}}`,
+            'message': message
+        }));
+        messageInputDom.value = '';
+    };
+
+    document.querySelector('#chat-search-input').addEventListener('input', function () {
+        const searchInputDom = document.querySelector('#chat-search-input');
+        const searchText = searchInputDom.value.trim();
+
+        if (searchText !== '') {
+            chatSocket.send(JSON.stringify({
+                'type': "search_message",
+                "author": `{{request.user}}`,
+                'message': searchText
+
+            }));
+        } else {
+            document.getElementById('search-results').style.display = 'none';
+            document.getElementById('search-results-content').innerHTML = '';
+        }
+    });
+
+    chatLog.onscroll = function () {
+        if (scrollDownBtn) {
+            if (chatLog.scrollTop < chatLog.scrollHeight - chatLog.clientHeight - 100) {
+                scrollDownBtn.style.display = 'block';
+            } else {
+                scrollDownBtn.style.display = 'none';
+            }
+        }
+    };
+
+
+
+    document.getElementById('invite-form').onsubmit = function () {
+        setTimeout(() => {
+            this.reset();
+        }, 100);
+    };
+
+
+    document.addEventListener('DOMContentLoaded', function() {
+    const inviteEmailInput = document.getElementById('invite-email');
+    const suggestions = document.getElementById('suggestions');
+
+    const userSearchSocket = new WebSocket(`ws://${window.location.host}/ws/search_users${window.location.pathname}`);
+
+    userSearchSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'user_search') {
+            suggestions.innerHTML = '';
+            data.users.forEach(user => {
+                const suggestion = document.createElement('div');
+                suggestion.textContent = `${user}`;
+                suggestion.style.cursor = 'pointer';
+                suggestion.onclick = function() {
+                    inviteEmailInput.value = user;
+                    suggestions.style.display = 'none';
+                };
+                suggestions.appendChild(suggestion);
+            });
+            suggestions.style.display = data.users.length > 0 ? 'block' : 'none';
+        }
+    };
+
+    inviteEmailInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length > 0) {
+            userSearchSocket.send(JSON.stringify({'query': query}));
+        } else {
+            suggestions.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', function(event) {
+        if (!document.getElementById('invite-form').contains(event.target)) {
+            suggestions.style.display = 'none';
+        }
+    });
+});
+function toggleChatOptions() {
+    var modal = document.getElementById('chatOptionsModal');
+    modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+}
+
+
+    setTimeout(function() {
+        const successMessages = document.querySelector('.success-messages');
+        const errorMessages = document.querySelector('.error-messages');
+ if (successMessages) {
+            successMessages.style.display = 'none';
+        }
+
+        if (errorMessages) {
+            errorMessages.style.display = 'none';
+        }
+    }, 3000);
+
+
+
+</script>
+{% endblock script %}
+

@@ -1,0 +1,46 @@
+{% extends "registration/base.html" %}
+{% load static %}
+{% block title %} Login {% endblock %}
+{% block content %}
+<div class="form-container">
+        <h2>Login</h2>
+        <a href="{% url 'signup' %}" class="btn btn-link btn-lg active btn-block">SignUp</a>
+
+    {% if form.errors %}
+        <div class="alert alert-danger" role="alert">
+            {% for field in form %}
+                {% if field.errors %}
+                    {{ field.errors }}
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+            <li class="{{ message.tags }}">
+                {{ message|safe }}
+
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+        <form method="post" class="form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label >E-Mail</label>
+                {{ form.email }}
+            </div>
+            <div class="form-group">
+                <label for="id_password">Password</label>
+                <input type="password" name="password" id="id_password" required>
+            </div>
+
+            <input type="submit" class="btn btn-primary btn-lg" value="Login">
+        </form>
+        <a href="{% url 'password_reset' %}" class="btn-link">Reset Password</a>
+    </div>
+{% endblock %}
+
