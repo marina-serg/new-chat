@@ -4,8 +4,8 @@ from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
 
-from .consumers import JoinAndLeave
-from .models import Group, Message
+from chat.consumers import JoinAndLeave
+from chat.models import Group, Message
 
 User = get_user_model()
 

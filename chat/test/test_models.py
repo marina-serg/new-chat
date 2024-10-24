@@ -3,7 +3,7 @@ import time
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from .models import Group, Message, Event
+from chat.models import Group, Message, Event
 
 User = get_user_model()
 

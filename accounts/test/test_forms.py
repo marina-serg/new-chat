@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from .forms import SignUpForm, LoginForm, UpdateProfileForm, UpdateUserForm
+from accounts.forms import SignUpForm, LoginForm, UpdateProfileForm, UpdateUserForm
 
 User = get_user_model()
 

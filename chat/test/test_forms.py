@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from .forms import GroupForm, InviteUserForm
+from chat.forms import GroupForm, InviteUserForm
 
 
 class GroupFormTests(TestCase):

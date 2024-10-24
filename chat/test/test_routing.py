@@ -5,7 +5,7 @@ from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
 
 from chat.models import Group
-from .consumers import JoinAndLeave, GroupConsumer, UserSearchConsumer
+from chat.consumers import JoinAndLeave, GroupConsumer, UserSearchConsumer
 
 User = get_user_model()
 
