@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Edit your account{% endblock %}
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="card-title">Edit your account</h2>
+          <p class="card-text">You can edit your account using the following form:</p>
+
+          <form method="post" action="{% url 'edit' %}" enctype="multipart/form-data">
+            <div class="mb-3">
+              {{ user_form.as_p }}
+              {{ profile_form.as_p }}
+            </div>
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">Save changes</button>
+
+          </form>
+
+            <a href="{% url 'password_change' %}" class="btn btn-outline-primary mt-3">Change Password</a>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

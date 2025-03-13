@@ -1,0 +1,54 @@
+name: chat
+
+services:
+  db:
+    image: postgres:15
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${SQL_USER}
+      - POSTGRES_PASSWORD=${SQL_PASSWORD}
+      - POSTGRES_DB=${SQL_DATABASE}
+    ports:
+      - '127.0.0.1:5435:5432'
+
+  redis:
+    container_name: 'redis'
+    image: redis:latest
+    ports:
+      - '127.0.0.1:6380:6379'
+    env_file:
+      - .env
+    volumes:
+      - redisdata:/data
+
+  web:
+    build: .
+    command: daphne django_channels_chat.asgi:application -b 0.0.0.0 -p 8000
+    volumes:
+      - staticfiles:/app/staticfiles
+      - .:/app
+    ports:
+      - '8000:8000'
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+  celery:
+    build: .
+    command: celery -A accounts worker -l info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - web
+
+volumes:
+  postgres-data:
+  redisdata:
+  staticfiles:

@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+{% block title %}Chat Room{% endblock title %}
+{% block content %}
+
+<div class="container mt-5">
+    <div class="row">
+       <div class="col-md-4">
+    <a id="backButton" href="{% url 'home' %}" class="btn btn-secondary mb-3">
+        <i class="fas fa-arrow-left"></i> Back
+    </a>
+    <div class="p-3 bg-light border rounded">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+           <img src="{{ group.chat_avatar.url }}" class="group-avatar mr-2 rounded-circle" alt="Avatar" width="50" height="50"/>
+            <div>
+                <h5 class="mb-1">{{ group_name }}</h5>
+                <small class="text-muted">(Members: {{ group_members|length }})</small>
+            </div>
+
+            <form action="{% url 'clear_chat' group_uuid=group_uuid %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">Clear Chat</button>
+            </form>
+        </div>
+
+        <ul id="members" class="list-group">
+                    {% for member in group_members %}
+                        <li id="member-{{ member.username }}" class="list-group-item">
+                            <a href="{% url 'user_detail' member.username %}">{{ member }}</a>
+                            <div>
+                                {% if member.profile.is_online %}
+                                    <span class="badge bg-success rounded-pill">online</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill">last {{ member.last_login }}</span>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+                   <h6>Invite user</h6>
+            <form id="invite-form" method="post" action="{% url 'invite_user' uuid=group.uuid %}" class="mb-3 d-flex">
+                {% csrf_token %}
+                <input type="text" id="invite-email" name="email" placeholder="Enter email" autocomplete="off" class="form-control">
+                <button type="submit" class="btn btn-primary ms-2">Invite</button>
+            </form>
+
+            {% if success_messages %}
+                <ul class="success-messages">
+                    {% for message in success_messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if invite_form.email.errors %}
+                <div class="error-messages" id="email-error">
+                    {% for error in invite_form.email.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+     <div id="suggestions"></div>
+    </div>
+</div>
+
+        <div class="col-md-8">
+            <div class="mb-3">
+                <button class="btn btn-secondary" onclick="toggleChatOptions()">...</button>
+                <div id="chatOptionsModal" class="modal" tabindex="-1" aria-labelledby="chatOptionsModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="chatOptionsModalLabel">Edit Chat</h5>
+                                <a href=" " class="btn-close" aria-label="Close"></a>
+                            </div>
+                            <div class="modal-body">
+                                <form method="post" enctype="multipart/form-data">
+                                    {{ group_form.as_p }}
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-primary">Save</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <input id="chat-search-input" type="text" class="form-control" placeholder="Search...">
+                <div id="search-results" class="border mt-2 p-2" style="display: none;">
+                    <h6>Results...</h6>
+                    <div id="search-results-content"></div>
+                </div>
+            </div>
+
+
+            <div id="chat-container" class="mb-3">
+                <div id="chat-log" class="border" style="height: 300px; overflow-y: auto;">
+                    {% for message in message_and_event_list %}
+
+                                <div id="message-{{ message.id }}" class="alert alert-info" role="alert">
+                                   {{ message }}
+                                </div>
+
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="d-flex">
+                <input id="chat-message-input" class="form-control" type="text" placeholder="Text...">
+                <button id="chat-message-submit" class="btn btn-success ms-2">Send</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block script %}
+
+<script>
+    const base_url = `${window.location.host}${window.location.pathname}`;
+    const chatSocket = new WebSocket(`ws://${base_url}`);
+    const chatLog = document.getElementById('chat-log');
+
+    chatSocket.onopen = function () {
+        console.log("Connected");
+    };
+
+    chatSocket.onmessage = function (e) {
+        const data = JSON.parse(e.data);
+
+        if (data.type === "search_message") {
+            const searchResultsDiv = document.getElementById('search-results');
+            const searchResultsContent = document.getElementById('search-results-content');
+
+            searchResultsContent.innerHTML = '';
+
+            data.message.forEach((result) => {
+                const messageId = `message-${result.message_id}`;
+                const link = document.createElement('a');
+                link.href = `#${messageId}`;
+                link.textContent = `${result.author}: ${result.text}`;
+
+                link.onclick = function (e) {
+                    e.preventDefault();
+                    setTimeout(() => {
+                        const messageElement = document.getElementById(messageId);
+                        if (messageElement) {
+                            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            document.getElementById('search-results').style.display = 'none';
+                            document.querySelector('#chat-search-input').value = '';
+                        }
+                    }, 100);
+                };
+
+                const resultDiv = document.createElement('div');
+                resultDiv.appendChild(link);
+                searchResultsContent.appendChild(resultDiv);
+            });
+
+            searchResultsDiv.style.display = 'block';
+        } else if (data.type === "text_message") {
+            const newMessage = document.createElement('div');
+            newMessage.id = `message-${data.message_id}`;
+
+
+            newMessage.innerHTML =  `<div class="alert alert-info" role="alert">
+                                   ${ data.message }
+                                </div>` ;
+
+            chatLog.appendChild(newMessage);
+
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+        else if (data.type === "leave_group_messenge") {
+                        const newMessage = document.createElement('div');
+
+
+
+            newMessage.innerHTML =  `<div class="alert alert-info" role="alert">
+                                   ${ data.text_data }
+                                </div>` ;
+
+            chatLog.appendChild(newMessage);
+
+            chatLog.scrollTop = chatLog.scrollHeight;
+
+        }
+
+        if (data.status === "Left") {
+            document.getElementById(`member-${data.user}`).remove();
+
+        } else if (data.status === "Join") {
+            const memberItem = document.createElement("li");
+            memberItem.id = `member-${data.user}`;
+            memberItem.textContent = data.user;
+            document.getElementById('members').appendChild(memberItem);
+        }
+    };
+
+    chatSocket.onclose = function () {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    document.querySelector('#chat-message-input').addEventListener('keyup', function (e) {
+        if (e.key === 'Enter') {
+            document.querySelector('#chat-message-submit').click();
+        }
+    });
+
+    document.querySelector('#chat-message-submit').onclick = function () {
+        const messageInputDom = document.querySelector('#chat-message-input');
+        const message = messageInputDom.value;
+        chatSocket.send(JSON.stringify({
+            'type': "text_message",
+            "author": `{{request.user}}`,
+            'message': message
+        }));
+        messageInputDom.value = '';
+    };
+
+    document.querySelector('#chat-search-input').addEventListener('input', function () {
+        const searchInputDom = document.querySelector('#chat-search-input');
+        const searchText = searchInputDom.value.trim();
+
+        if (searchText !== '') {
+            chatSocket.send(JSON.stringify({
+                'type': "search_message",
+                "author": `{{request.user}}`,
+                'message': searchText
+
+            }));
+        } else {
+            document.getElementById('search-results').style.display = 'none';
+            document.getElementById('search-results-content').innerHTML = '';
+        }
+    });
+
+    function addMessageToChat(message, author) {
+        const chatBox = document.getElementById("chat-box");
+        const messageElement = document.createElement("div");
+        messageElement.innerText = `${author}: ${message}`;
+        chatBox.appendChild(messageElement);
+    };
+
+
+
+    document.getElementById('invite-form').onsubmit = function () {
+        setTimeout(() => {
+            this.reset();
+        }, 100);
+    };
+
+
+    document.addEventListener('DOMContentLoaded', function() {
+    const inviteEmailInput = document.getElementById('invite-email');
+    const suggestions = document.getElementById('suggestions');
+
+    const userSearchSocket = new WebSocket(`ws://${window.location.host}/ws/search_users${window.location.pathname}`);
+
+    userSearchSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'user_search') {
+            suggestions.innerHTML = '';
+            data.users.forEach(user => {
+                const suggestion = document.createElement('div');
+                suggestion.textContent = `${user}`;
+                suggestion.style.cursor = 'pointer';
+                suggestion.onclick = function() {
+                    inviteEmailInput.value = user;
+                    suggestions.style.display = 'none';
+                };
+                suggestions.appendChild(suggestion);
+            });
+            suggestions.style.display = data.users.length > 0 ? 'block' : 'none';
+        }
+    };
+
+    inviteEmailInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length > 0) {
+            userSearchSocket.send(JSON.stringify({'query': query}));
+        } else {
+            suggestions.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', function(event) {
+        if (!document.getElementById('invite-form').contains(event.target)) {
+            suggestions.style.display = 'none';
+        }
+    });
+});
+function toggleChatOptions() {
+    var modal = document.getElementById('chatOptionsModal');
+    modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+}
+
+
+    setTimeout(function() {
+        const successMessages = document.querySelector('.success-messages');
+        const errorMessages = document.querySelector('.error-messages');
+ if (successMessages) {
+            successMessages.style.display = 'none';
+        }
+
+        if (errorMessages) {
+            errorMessages.style.display = 'none';
+        }
+    }, 3000);
+
+
+
+</script>
+{% endblock script %}
+
